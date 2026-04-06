@@ -23,6 +23,7 @@ struct AppView: View {
                     MapView(store: store.scope(state: \.map, action: \.map))
                 }
             }
+            .tint(Color.appPrimary)
         } destination: { store in
             switch store.case {
             case let .itineraryItemDetail(store):

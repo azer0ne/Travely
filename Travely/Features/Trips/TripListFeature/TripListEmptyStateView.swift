@@ -51,10 +51,10 @@ struct TripListInlineMessageView: View {
     var body: some View {
         Text(message)
             .font(.subheadline)
-            .foregroundStyle(.red)
+            .foregroundStyle(Color.appTertiary)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.red.opacity(0.08))
+            .background(Color.appTertiary.opacity(0.12))
             .clipShape(.rect(cornerRadius: 14))
     }
 }

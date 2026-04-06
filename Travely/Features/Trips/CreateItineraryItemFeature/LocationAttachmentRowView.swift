@@ -16,11 +16,11 @@ struct LocationAttachmentRowView: View {
                     Button(action: onTapped) {
                         HStack(spacing: 14) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(red: 0.93, green: 0.96, blue: 1.0))
+                                .fill(Color.appNeutral)
                                 .frame(width: 48, height: 48)
                                 .overlay {
                                     Image(systemName: "mappin.and.ellipse")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(Color.appPrimary)
                                 }
 
                             VStack(alignment: .leading, spacing: 4) {

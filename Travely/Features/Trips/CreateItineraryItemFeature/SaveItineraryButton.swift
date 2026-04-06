@@ -20,7 +20,7 @@ struct SaveItineraryButton: View {
                 Spacer()
             }
             .padding(.vertical, 18)
-            .background(isDisabled ? Color(red: 0.73, green: 0.8, blue: 0.92) : Color(red: 0.11, green: 0.46, blue: 0.95))
+            .background(isDisabled ? Color.appSecondary.opacity(0.55) : Color.appPrimary)
             .foregroundStyle(.white)
             .clipShape(.rect(cornerRadius: 18))
         }

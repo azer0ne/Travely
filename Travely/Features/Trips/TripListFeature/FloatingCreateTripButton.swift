@@ -9,7 +9,7 @@ struct FloatingCreateTripButton: View {
             .font(.title2)
             .foregroundStyle(.white)
             .frame(width: 58, height: 58)
-            .background(Color.blue)
+            .background(Color.appPrimary)
             .clipShape(.circle)
             .shadow(color: .blue.opacity(0.28), radius: 18, y: 10)
             .accessibilityLabel("Create Trip")

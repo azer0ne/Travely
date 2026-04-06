@@ -36,7 +36,7 @@ struct TripListView: View {
             .padding(.top, 20)
             .padding(.bottom, 96)
         }
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(Color.appNeutral)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.view(.onAppear))

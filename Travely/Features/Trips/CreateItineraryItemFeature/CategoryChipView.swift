@@ -10,7 +10,7 @@ struct CategoryChipView: View {
             Text(category.title)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(isSelected ? Color(red: 0.11, green: 0.46, blue: 0.95) : .white)
+                .background(isSelected ? Color.appPrimary : .white)
                 .foregroundStyle(isSelected ? .white : .primary)
                 .clipShape(.capsule)
                 .overlay {

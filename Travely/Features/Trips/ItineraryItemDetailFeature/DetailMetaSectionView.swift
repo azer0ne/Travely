@@ -4,7 +4,7 @@ struct DetailMetaSectionView: View {
     let itineraryItem: ItineraryItem
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 14) {
             DetailMetaColumnView(
                 label: "Date",
                 systemImage: "calendar",
@@ -12,7 +12,8 @@ struct DetailMetaSectionView: View {
             )
 
             Divider()
-                .padding(.vertical, 18)
+                .frame(width: 1, height: 44)
+                .padding(.vertical, 6)
 
             DetailMetaColumnView(
                 label: "Time",
@@ -20,7 +21,7 @@ struct DetailMetaSectionView: View {
                 value: itineraryItem.time.formatted(date: .omitted, time: .shortened)
             )
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(.white)
         .clipShape(.rect(cornerRadius: 24))
