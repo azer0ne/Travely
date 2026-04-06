@@ -32,6 +32,7 @@ struct AppFeature {
     enum Path {
         case itineraryItemDetail(ItineraryItemDetailFeature)
         case tripDetail(TripDetailFeature)
+        case tripMap(TripMapFeature)
     }
 
     var body: some ReducerOf<Self> {
@@ -60,11 +61,17 @@ struct AppFeature {
                 state.path.append(.itineraryItemDetail(ItineraryItemDetailFeature.State(trip: trip, itineraryItem: item)))
                 return .none
 
-            case .path(.element(id: _, action: .tripDetail(.delegate(.viewMapRequested(_))))):
+            case let .path(.element(id: _, action: .tripDetail(.delegate(.viewMapRequested(trip))))):
+                state.path.append(.tripMap(TripMapFeature.State(trip: trip)))
+                return .none
+
+            case let .path(.element(id: _, action: .tripMap(.delegate(.itineraryItemSelected(trip, item))))):
+                state.path.append(.itineraryItemDetail(ItineraryItemDetailFeature.State(trip: trip, itineraryItem: item)))
                 return .none
 
             case let .path(.element(id: _, action: .itineraryItemDetail(.delegate(.itineraryItemUpdated(tripID, item))))):
                 state.updateTripDetailState(for: tripID, itineraryItem: item)
+                state.updateTripMapState(for: tripID, itineraryItem: item)
                 return .none
 
             case .binding:
@@ -110,6 +117,25 @@ private extension AppFeature.State {
             tripDetailState.trip.itineraryItems = updatedItems
             tripDetailState.updateItineraryItems(updatedItems)
             path[id: elementID, case: \.tripDetail] = tripDetailState
+        }
+    }
+
+    mutating func updateTripMapState(for tripID: Trip.ID, itineraryItem: ItineraryItem) {
+        for elementID in path.ids {
+            guard var tripMapState = path[id: elementID, case: \.tripMap] else {
+                continue
+            }
+
+            guard tripMapState.trip.id == tripID else {
+                continue
+            }
+
+            let updatedItems = tripMapState.trip.itineraryItems.map { existingItem in
+                existingItem.id == itineraryItem.id ? itineraryItem : existingItem
+            }
+
+            tripMapState.updateItineraryItems(updatedItems)
+            path[id: elementID, case: \.tripMap] = tripMapState
         }
     }
 }

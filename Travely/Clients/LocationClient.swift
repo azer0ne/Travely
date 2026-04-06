@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import CoreLocation
 import Foundation
 
 struct LocationClient {
@@ -7,7 +8,9 @@ struct LocationClient {
 
 extension LocationClient: DependencyKey {
     static let liveValue = Self(
-        currentCoordinates: { nil }
+        currentCoordinates: {
+            try await CoreLocationOneShotRequest().currentCoordinates()
+        }
     )
 
     static let previewValue = Self(
