@@ -20,7 +20,7 @@ struct TripCardView: View {
                         Text(badgeText)
                             .font(.caption2)
                             .bold()
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.appPrimary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(.white)
@@ -56,11 +56,11 @@ struct TripCardView: View {
                         Menu {
                             Button("Delete Trip", role: .destructive, action: onDeleteTapped)
                         } label: {
-                            Image(systemName: accessorySymbol)
+                            Image(systemName: "ellipsis")
                                 .font(.headline)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.appPrimary)
                                 .frame(width: 32, height: 32)
-                                .background(Color.blue.opacity(0.08))
+                                .background(Color.appPrimary.opacity(0.08))
                                 .clipShape(.circle)
                         }
                         .buttonStyle(.plain)
@@ -103,10 +103,6 @@ struct TripCardView: View {
         }
 
         return startDate.formatted(.dateTime.month(.abbreviated).year())
-    }
-
-    private var accessorySymbol: String {
-        trip.itineraryItems.isEmpty ? "ellipsis" : "arrow.right"
     }
 }
 

@@ -24,7 +24,7 @@ struct ActivityHeroHeaderView: View {
                     .overlay {
                         Image(systemName: symbolName)
                             .font(.largeTitle)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.appPrimary)
                     }
             }
     }

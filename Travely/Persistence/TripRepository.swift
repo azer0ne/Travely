@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import SwiftData
 
 struct TripRepository {
     var fetchTrips: @Sendable () async throws -> [Trip]
@@ -44,11 +45,44 @@ extension TripRepository {
             }
         )
     }
+
+    static func live(modelContainer: ModelContainer) -> Self {
+        let store = SwiftDataTripRepositoryStore(modelContainer: modelContainer)
+
+        return Self(
+            fetchTrips: {
+                try await store.fetchTrips()
+            },
+            createTrip: { trip in
+                try await store.createTrip(trip)
+            },
+            deleteTrip: { tripID in
+                try await store.deleteTrip(id: tripID)
+            },
+            fetchItineraryItems: { tripID in
+                try await store.fetchItineraryItems(tripID: tripID)
+            },
+            addItineraryItem: { item, tripID in
+                try await store.addItineraryItem(item, to: tripID)
+            },
+            updateItineraryItem: { item, tripID in
+                try await store.updateItineraryItem(item, in: tripID)
+            },
+            deleteItineraryItem: { itemID, tripID in
+                try await store.deleteItineraryItem(itemID: itemID, from: tripID)
+            }
+        )
+    }
 }
 
 extension TripRepository: DependencyKey {
-    // Temporary live behavior until a SwiftData-backed implementation is injected.
-    static let liveValue = Self.inMemory()
+    static let liveValue: Self = {
+        do {
+            return .live(modelContainer: try TravelyModelContainer.make())
+        } catch {
+            fatalError("Failed to create SwiftData-backed TripRepository: \(error)")
+        }
+    }()
     static let previewValue = Self.inMemory()
     static let testValue = Self.inMemory()
 }
@@ -124,5 +158,105 @@ private actor InMemoryTripRepositoryStore {
 
         trip.itineraryItems.removeAll { $0.id == itemID }
         tripsByID[tripID] = trip
+    }
+}
+
+@ModelActor
+private actor SwiftDataTripRepositoryStore {
+    func fetchTrips() throws -> [Trip] {
+        let descriptor = FetchDescriptor<TripEntity>()
+        return try modelContext.fetch(descriptor)
+            .map { $0.toDomain() }
+            .sorted { lhs, rhs in
+                lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+            }
+    }
+
+    func createTrip(_ trip: Trip) throws {
+        modelContext.insert(TripEntity(trip: trip))
+        try modelContext.save()
+    }
+
+    func deleteTrip(id tripID: Trip.ID) throws {
+        let trip = try fetchTripEntity(id: tripID)
+        modelContext.delete(trip)
+        try modelContext.save()
+    }
+
+    func fetchItineraryItems(tripID: Trip.ID) throws -> [ItineraryItem] {
+        let trip = try fetchTripEntity(id: tripID)
+        return trip.itineraryItems
+            .map { $0.toDomain() }
+            .sorted { lhs, rhs in
+                if lhs.date != rhs.date {
+                    return lhs.date < rhs.date
+                }
+
+                return lhs.time < rhs.time
+            }
+    }
+
+    func addItineraryItem(_ item: ItineraryItem, to tripID: Trip.ID) throws {
+        let trip = try fetchTripEntity(id: tripID)
+
+        var itineraryItem = item
+        itineraryItem.tripID = tripID
+
+        let entity = ItineraryItemEntity(item: itineraryItem, trip: trip)
+        modelContext.insert(entity)
+        try modelContext.save()
+    }
+
+    func updateItineraryItem(_ item: ItineraryItem, in tripID: Trip.ID) throws {
+        let itineraryItem = try fetchItineraryItemEntity(id: item.id, tripID: tripID)
+
+        var updatedItem = item
+        updatedItem.tripID = tripID
+        itineraryItem.update(from: updatedItem)
+        try modelContext.save()
+    }
+
+    func deleteItineraryItem(itemID: ItineraryItem.ID, from tripID: Trip.ID) throws {
+        let itineraryItem = try fetchItineraryItemEntity(id: itemID, tripID: tripID)
+
+        modelContext.delete(itineraryItem)
+        try modelContext.save()
+    }
+
+    private func fetchTripEntity(id tripID: Trip.ID) throws -> TripEntity {
+        var descriptor = FetchDescriptor<TripEntity>(
+            predicate: #Predicate<TripEntity> { trip in
+                trip.id == tripID
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        guard let trip = try modelContext.fetch(descriptor).first else {
+            throw TripRepositoryError.tripNotFound(tripID)
+        }
+
+        return trip
+    }
+
+    private func fetchItineraryItemEntity(
+        id itemID: ItineraryItem.ID,
+        tripID: Trip.ID
+    ) throws -> ItineraryItemEntity {
+        var descriptor = FetchDescriptor<ItineraryItemEntity>(
+            predicate: #Predicate<ItineraryItemEntity> { item in
+                item.id == itemID
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        guard let item = try modelContext.fetch(descriptor).first else {
+            throw TripRepositoryError.itineraryItemNotFound(itemID, tripID)
+        }
+
+        if item.trip?.id != tripID {
+            throw TripRepositoryError.itineraryItemNotFound(itemID, tripID)
+        }
+
+        return item
     }
 }

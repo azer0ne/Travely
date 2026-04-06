@@ -47,7 +47,7 @@ struct CreateTripView: View {
             if let validationMessage = store.validationMessage {
                 Section {
                     Text(validationMessage)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appTertiary)
                 }
             }
         }

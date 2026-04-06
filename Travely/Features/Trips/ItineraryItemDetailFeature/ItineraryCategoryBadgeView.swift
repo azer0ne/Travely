@@ -7,7 +7,7 @@ struct ItineraryCategoryBadgeView: View {
         Text(category.title.uppercased())
             .font(.caption)
             .bold()
-            .foregroundStyle(.blue)
+            .foregroundStyle(Color.appPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color.white.opacity(0.88))

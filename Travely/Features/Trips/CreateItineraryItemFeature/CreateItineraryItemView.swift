@@ -35,7 +35,7 @@ struct CreateItineraryItemView: View {
 
                 if let errorMessage = store.errorMessage {
                     Text(errorMessage)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appTertiary)
                         .font(.subheadline)
                 }
             }
@@ -44,7 +44,7 @@ struct CreateItineraryItemView: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .background(Color(red: 0.96, green: 0.97, blue: 0.99))
+        .background(Color.appNeutral)
         .navigationTitle(store.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -68,9 +68,9 @@ struct CreateItineraryItemView: View {
             .padding(.bottom, 8)
             .background(.ultraThinMaterial)
         }
-        .sheet(item: $store.scope(state: \.locationSearch, action: \.locationSearch)) { store in
+        .sheet(item: $store.scope(state: \.placePicker, action: \.placePicker)) { store in
             NavigationStack {
-                LocationSearchView(store: store)
+                PlacePickerView(store: store)
             }
         }
     }

@@ -13,7 +13,7 @@ struct ItineraryRowView: View {
                     .frame(width: 48, height: 48)
                     .overlay {
                         Image(systemName: symbolName)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.appPrimary)
                     }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -83,6 +83,6 @@ struct ItineraryRowView: View {
     }
 
     private var iconBackgroundColor: Color {
-        Color(red: 0.93, green: 0.96, blue: 1.0)
+        Color.appNeutral
     }
 }

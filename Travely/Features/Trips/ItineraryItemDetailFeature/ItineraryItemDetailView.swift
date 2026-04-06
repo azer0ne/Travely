@@ -7,9 +7,8 @@ struct ItineraryItemDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                ItineraryItemHeaderView(
-                    itineraryItem: store.itineraryItem,
-                    tripImageData: store.trip.imageData
+                ActivityHeroHeaderView(
+                    category: store.itineraryItem.category
                 )
 
                 if let category = store.itineraryItem.category {
@@ -27,8 +26,8 @@ struct ItineraryItemDetailView: View {
                     LocationSectionView(place: attachedPlace)
                     MapPreviewSectionView(
                         place: attachedPlace,
-                        onOpenInMapsTapped: {
-                            store.send(.view(.openInMapsTapped))
+                        onViewMapTapped: {
+                            store.send(.view(.viewMapTapped))
                         }
                     )
                 }
@@ -41,7 +40,7 @@ struct ItineraryItemDetailView: View {
             .padding(.top, 20)
             .padding(.bottom, 32)
         }
-        .background(Color(red: 0.96, green: 0.97, blue: 0.99))
+        .background(Color.appNeutral)
         .scrollIndicators(.hidden)
         .navigationTitle("Itinerary Detail")
         .navigationBarTitleDisplayMode(.inline)
@@ -61,6 +60,11 @@ struct ItineraryItemDetailView: View {
         .sheet(item: $store.scope(state: \.editItineraryItem, action: \.editItineraryItem)) { store in
             NavigationStack {
                 CreateItineraryItemView(store: store)
+            }
+        }
+        .sheet(item: $store.scope(state: \.placeMap, action: \.placeMap)) { store in
+            NavigationStack {
+                PlaceMapView(store: store)
             }
         }
     }

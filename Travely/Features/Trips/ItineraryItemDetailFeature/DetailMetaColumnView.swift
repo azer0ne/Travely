@@ -8,7 +8,7 @@ struct DetailMetaColumnView: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.95, green: 0.96, blue: 0.99))
+                .fill(Color.appNeutral)
                 .frame(width: 44, height: 44)
                 .overlay {
                     Image(systemName: systemImage)
@@ -25,6 +25,10 @@ struct DetailMetaColumnView: View {
                     .font(.title3)
                     .bold()
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .allowsTightening(true)
+                    .layoutPriority(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

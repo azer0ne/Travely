@@ -6,7 +6,7 @@ struct TripDetailView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.96, green: 0.97, blue: 0.99)
+            Color.appNeutral
                 .ignoresSafeArea()
 
             ScrollView {

@@ -12,7 +12,7 @@ struct CreateItineraryItemFeature {
             case edit(ItineraryItem.ID)
         }
 
-        @Presents var locationSearch: LocationSearchFeature.State?
+        @Presents var placePicker: PlacePickerFeature.State?
         var attachedPlace: Place?
         var errorMessage: String?
         var isSaving = false
@@ -68,7 +68,7 @@ struct CreateItineraryItemFeature {
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case delegate(DelegateAction)
-        case locationSearch(PresentationAction<LocationSearchFeature.Action>)
+        case placePicker(PresentationAction<PlacePickerFeature.Action>)
         case saveResponse(TaskResult<ItineraryItem>)
         case view(ViewAction)
     }
@@ -104,7 +104,7 @@ struct CreateItineraryItemFeature {
                 return .none
 
             case .view(.locationTapped):
-                state.locationSearch = LocationSearchFeature.State(query: state.attachedPlace?.name ?? "")
+                state.placePicker = PlacePickerFeature.State(query: state.attachedPlace?.name ?? "")
                 return .none
 
             case .view(.removeLocationTapped):
@@ -158,24 +158,24 @@ struct CreateItineraryItemFeature {
                 state.errorMessage = "Could not save this itinerary item."
                 return .none
 
-            case .locationSearch(.presented(.delegate(.cancelled))):
-                state.locationSearch = nil
+            case .placePicker(.presented(.delegate(.cancelled))):
+                state.placePicker = nil
                 return .none
 
-            case let .locationSearch(.presented(.delegate(.placeSelected(place)))):
+            case let .placePicker(.presented(.delegate(.placeSelected(place)))):
                 state.attachedPlace = place
-                state.locationSearch = nil
+                state.placePicker = nil
                 return .none
 
-            case .locationSearch:
+            case .placePicker:
                 return .none
 
             case .delegate:
                 return .none
             }
         }
-        .ifLet(\.$locationSearch, action: \.locationSearch) {
-            LocationSearchFeature()
+        .ifLet(\.$placePicker, action: \.placePicker) {
+            PlacePickerFeature()
         }
     }
 }

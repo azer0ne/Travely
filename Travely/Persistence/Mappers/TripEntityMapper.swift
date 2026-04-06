@@ -1,15 +1,16 @@
 import Foundation
 
-extension TripRecord {
-    convenience init(trip: Trip) {
+extension TripEntity {
+    convenience init(trip: Trip, createdAt: Date = .now) {
         self.init(
             id: trip.id,
+            createdAt: createdAt,
             imageData: trip.imageData,
             name: trip.name,
             startDate: trip.startDate,
             endDate: trip.endDate
         )
-        itineraryItems = trip.itineraryItems.map { ItineraryItemRecord(item: $0, trip: self) }
+        itineraryItems = trip.itineraryItems.map { ItineraryItemEntity(item: $0, trip: self) }
     }
 
     func update(from trip: Trip) {
@@ -20,7 +21,7 @@ extension TripRecord {
         endDate = trip.endDate
 
         let existingItemsByID = Dictionary(
-            uniqueKeysWithValues: (itineraryItems ?? []).map { ($0.id, $0) }
+            uniqueKeysWithValues: itineraryItems.map { ($0.id, $0) }
         )
 
         itineraryItems = trip.itineraryItems.map { item in
@@ -28,7 +29,7 @@ extension TripRecord {
                 existing.update(from: item, trip: self)
                 return existing
             } else {
-                return ItineraryItemRecord(item: item, trip: self)
+                return ItineraryItemEntity(item: item, trip: self)
             }
         }
     }
@@ -40,13 +41,17 @@ extension TripRecord {
             name: name,
             startDate: startDate,
             endDate: endDate,
-            itineraryItems: (itineraryItems ?? []).map { $0.toDomain() }
+            itineraryItems: itineraryItems
+                .map { $0.toDomain() }
+                .sorted(by: Self.sortItems)
         )
     }
-}
 
-extension Trip {
-    func toRecord() -> TripRecord {
-        TripRecord(trip: self)
+    private static func sortItems(lhs: ItineraryItem, rhs: ItineraryItem) -> Bool {
+        if lhs.date != rhs.date {
+            return lhs.date < rhs.date
+        }
+
+        return lhs.time < rhs.time
     }
 }

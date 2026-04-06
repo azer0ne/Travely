@@ -3,11 +3,10 @@ import Foundation
 
 @Reducer
 struct ItineraryItemDetailFeature {
-    @Dependency(\.externalMapsClient) var externalMapsClient
-
     @ObservableState
     struct State: Equatable {
         @Presents var editItineraryItem: CreateItineraryItemFeature.State?
+        @Presents var placeMap: PlaceMapFeature.State?
         var itineraryItem: ItineraryItem
         var trip: Trip
 
@@ -27,24 +26,12 @@ struct ItineraryItemDetailFeature {
         var hasNotes: Bool {
             !itineraryItem.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-
-        var mapURL: URL? {
-            guard let attachedPlace = itineraryItem.attachedPlace else {
-                return nil
-            }
-
-            var components = URLComponents(string: "https://maps.apple.com")
-            components?.queryItems = [
-                URLQueryItem(name: "ll", value: "\(attachedPlace.latitude),\(attachedPlace.longitude)"),
-                URLQueryItem(name: "q", value: attachedPlace.name)
-            ]
-            return components?.url
-        }
     }
 
     enum Action {
         case delegate(DelegateAction)
         case editItineraryItem(PresentationAction<CreateItineraryItemFeature.Action>)
+        case placeMap(PresentationAction<PlaceMapFeature.Action>)
         case view(ViewAction)
     }
 
@@ -55,7 +42,7 @@ struct ItineraryItemDetailFeature {
     enum ViewAction: Equatable {
         case editTapped
         case onAppear
-        case openInMapsTapped
+        case viewMapTapped
     }
 
     var body: some ReducerOf<Self> {
@@ -71,14 +58,13 @@ struct ItineraryItemDetailFeature {
                 )
                 return .none
 
-            case .view(.openInMapsTapped):
-                guard let mapURL = state.mapURL else {
+            case .view(.viewMapTapped):
+                guard let attachedPlace = state.itineraryItem.attachedPlace else {
                     return .none
                 }
 
-                return .run { _ in
-                    await externalMapsClient.open(mapURL)
-                }
+                state.placeMap = PlaceMapFeature.State(place: attachedPlace)
+                return .none
 
             case .editItineraryItem(.presented(.delegate(.cancelled))):
                 state.editItineraryItem = nil
@@ -95,6 +81,9 @@ struct ItineraryItemDetailFeature {
             case .editItineraryItem(.presented(.delegate(.itineraryItemCreated))):
                 return .none
 
+            case .placeMap:
+                return .none
+
             case .delegate:
                 return .none
 
@@ -104,6 +93,9 @@ struct ItineraryItemDetailFeature {
         }
         .ifLet(\.$editItineraryItem, action: \.editItineraryItem) {
             CreateItineraryItemFeature()
+        }
+        .ifLet(\.$placeMap, action: \.placeMap) {
+            PlaceMapFeature()
         }
     }
 }
