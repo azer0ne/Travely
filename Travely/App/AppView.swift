@@ -30,6 +30,8 @@ struct AppView: View {
                 ItineraryItemDetailView(store: store)
             case let .tripDetail(store):
                 TripDetailView(store: store)
+            case let .tripMap(store):
+                TripMapView(store: store)
             }
         }
     }
