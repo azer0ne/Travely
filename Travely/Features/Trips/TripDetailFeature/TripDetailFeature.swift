@@ -8,6 +8,7 @@ struct TripDetailFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var createItineraryItem: CreateItineraryItemFeature.State?
+        var deletingItemID: ItineraryItem.ID?
 
         struct ItinerarySection: Equatable, Identifiable {
             let date: Date
@@ -19,6 +20,7 @@ struct TripDetailFeature {
         }
 
         var errorMessage: String?
+        var itemPendingDeletion: ItineraryItem?
         var isLoading = false
         var itineraryItems: [ItineraryItem]
         var itinerarySections: [ItinerarySection]
@@ -75,19 +77,22 @@ struct TripDetailFeature {
 
     enum Action {
         case createItineraryItem(PresentationAction<CreateItineraryItemFeature.Action>)
+        case deleteItineraryItemResponse(TaskResult<ItineraryItem.ID>)
         case delegate(DelegateAction)
-        case itineraryItemsLoadFailed
-        case itineraryItemsLoaded([ItineraryItem])
+        case itineraryItemsResponse(TaskResult<[ItineraryItem]>)
         case view(ViewAction)
     }
 
     enum DelegateAction: Equatable {
         case itineraryItemSelected(Trip, ItineraryItem)
+        case tripUpdated(Trip)
         case viewMapRequested(Trip)
     }
 
     enum ViewAction {
         case addPlaceTapped
+        case deleteItineraryItemConfirmationDismissed
+        case deleteItineraryItemConfirmed
         case deleteItineraryItemTapped(ItineraryItem.ID)
         case itineraryItemTapped(ItineraryItem.ID)
         case onAppear
@@ -98,17 +103,18 @@ struct TripDetailFeature {
         Reduce { state, action in
             switch action {
             case .view(.onAppear):
+                guard !state.isLoading else {
+                    return .none
+                }
+
                 state.isLoading = true
                 state.errorMessage = nil
 
                 let tripID = state.trip.id
                 return .run { send in
-                    do {
-                        let items = try await tripRepository.fetchItineraryItems(tripID)
-                        await send(.itineraryItemsLoaded(items))
-                    } catch {
-                        await send(.itineraryItemsLoadFailed)
-                    }
+                    await send(.itineraryItemsResponse(TaskResult {
+                        try await tripRepository.fetchItineraryItems(tripID)
+                    }))
                 }
 
             case .view(.addPlaceTapped):
@@ -126,57 +132,76 @@ struct TripDetailFeature {
                 return .send(.delegate(.itineraryItemSelected(state.trip, item)))
 
             case let .view(.deleteItineraryItemTapped(itemID)):
-                state.isLoading = true
+                guard state.deletingItemID == nil,
+                    let item = state.itineraryItems.first(where: { $0.id == itemID })
+                else {
+                    return .none
+                }
+
+                state.itemPendingDeletion = item
+                return .none
+
+            case .view(.deleteItineraryItemConfirmationDismissed):
+                state.itemPendingDeletion = nil
+                return .none
+
+            case .view(.deleteItineraryItemConfirmed):
+                guard let item = state.itemPendingDeletion, state.deletingItemID == nil else {
+                    return .none
+                }
+
+                state.itemPendingDeletion = nil
+                state.deletingItemID = item.id
                 state.errorMessage = nil
 
                 let tripID = state.trip.id
-                return .run { send in
-                    do {
+                return .run { [itemID = item.id] send in
+                    await send(.deleteItineraryItemResponse(TaskResult {
                         try await tripRepository.deleteItineraryItem(itemID, tripID)
-                        let items = try await tripRepository.fetchItineraryItems(tripID)
-                        await send(.itineraryItemsLoaded(items))
-                    } catch {
-                        await send(.itineraryItemsLoadFailed)
-                    }
+                        return itemID
+                    }))
                 }
 
-            case let .itineraryItemsLoaded(items):
+            case let .itineraryItemsResponse(.success(items)):
                 state.isLoading = false
                 state.errorMessage = nil
                 state.updateItineraryItems(items)
                 return .none
 
-            case .itineraryItemsLoadFailed:
+            case .itineraryItemsResponse(.failure):
                 state.isLoading = false
                 state.errorMessage = "Could not load itinerary."
+                return .none
+
+            case let .deleteItineraryItemResponse(.success(itemID)):
+                state.deletingItemID = nil
+                state.errorMessage = nil
+                state.updateItineraryItems(state.itineraryItems.filter { $0.id != itemID })
+                return .send(.delegate(.tripUpdated(state.trip)))
+
+            case .deleteItineraryItemResponse(.failure):
+                state.deletingItemID = nil
+                state.errorMessage = "Could not delete this itinerary item."
                 return .none
 
             case .createItineraryItem(.presented(.delegate(.cancelled))):
                 state.createItineraryItem = nil
                 return .none
 
-            case .createItineraryItem(.presented(.delegate(.itineraryItemCreated))):
+            case let .createItineraryItem(.presented(.delegate(.itineraryItemCreated(item)))):
                 state.createItineraryItem = nil
-                state.isLoading = true
                 state.errorMessage = nil
-
-                let tripID = state.trip.id
-                return .run { send in
-                    do {
-                        let items = try await tripRepository.fetchItineraryItems(tripID)
-                        await send(.itineraryItemsLoaded(items))
-                    } catch {
-                        await send(.itineraryItemsLoadFailed)
-                    }
-                }
+                state.updateItineraryItems(state.itineraryItems + [item])
+                return .send(.delegate(.tripUpdated(state.trip)))
 
             case let .createItineraryItem(.presented(.delegate(.itineraryItemUpdated(item)))):
                 state.createItineraryItem = nil
-                state.trip.itineraryItems = state.trip.itineraryItems.map { existingItem in
+                state.errorMessage = nil
+                let updatedItems = state.itineraryItems.map { existingItem in
                     existingItem.id == item.id ? item : existingItem
                 }
-                state.updateItineraryItems(state.trip.itineraryItems)
-                return .none
+                state.updateItineraryItems(updatedItems)
+                return .send(.delegate(.tripUpdated(state.trip)))
 
             case .createItineraryItem:
                 return .none

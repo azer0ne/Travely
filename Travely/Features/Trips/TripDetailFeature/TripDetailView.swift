@@ -25,10 +25,30 @@ struct TripDetailView: View {
                         EmptyItineraryView()
                     } else {
                         VStack(alignment: .leading, spacing: 28) {
+                            if let errorMessage = store.errorMessage {
+                                Text(errorMessage)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.appTertiary)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 12)
+                                    .background(Color.appTertiary.opacity(0.12))
+                                    .clipShape(.rect(cornerRadius: 14))
+                            }
+
+                            if store.deletingItemID != nil {
+                                ProgressView("Removing itinerary item")
+                            }
+
+                            if store.isLoading {
+                                ProgressView("Refreshing itinerary")
+                            }
+
                             ForEach(store.itinerarySections.indices, id: \.self) { index in
                                 let section = store.itinerarySections[index]
                                 ItineraryDaySectionView(
                                     dayNumber: index + 1,
+                                    deletingItemID: store.deletingItemID,
+                                    isDeleteActionDisabled: store.deletingItemID != nil,
                                     section: section,
                                     onDeleteTapped: { itemID in
                                         store.send(.view(.deleteItineraryItemTapped(itemID)))
@@ -51,6 +71,29 @@ struct TripDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.view(.onAppear))
+        }
+        .confirmationDialog(
+            "Delete itinerary item?",
+            isPresented: Binding(
+                get: { store.itemPendingDeletion != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        store.send(.view(.deleteItineraryItemConfirmationDismissed))
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: store.itemPendingDeletion
+        ) { _ in
+            Button("Delete Item", role: .destructive) {
+                store.send(.view(.deleteItineraryItemConfirmed))
+            }
+
+            Button("Cancel", role: .cancel) {
+                store.send(.view(.deleteItineraryItemConfirmationDismissed))
+            }
+        } message: { item in
+            Text("\"\(item.title)\" will be removed from this trip.")
         }
         .safeAreaInset(edge: .bottom) {
             HStack {

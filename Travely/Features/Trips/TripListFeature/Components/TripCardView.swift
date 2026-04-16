@@ -1,7 +1,8 @@
 import SwiftUI
-import UIKit
 
 struct TripCardView: View {
+    let isDeleteActionDisabled: Bool
+    let isDeleting: Bool
     let trip: Trip
     let onDeleteTapped: () -> Void
     let onTapped: () -> Void
@@ -53,17 +54,27 @@ struct TripCardView: View {
 
                         Spacer()
 
-                        Menu {
-                            Button("Delete Trip", role: .destructive, action: onDeleteTapped)
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.headline)
-                                .foregroundStyle(Color.appPrimary)
+                        if isDeleting {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(Color.appPrimary)
                                 .frame(width: 32, height: 32)
                                 .background(Color.appPrimary.opacity(0.08))
                                 .clipShape(.circle)
+                        } else {
+                            Menu {
+                                Button("Delete Trip", role: .destructive, action: onDeleteTapped)
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.headline)
+                                    .foregroundStyle(Color.appPrimary)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.appPrimary.opacity(0.08))
+                                    .clipShape(.circle)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isDeleteActionDisabled)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(18)
@@ -203,7 +214,7 @@ private struct TripCardMetaPill: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .background(Color.appNeutral)
             .clipShape(.capsule)
     }
 }

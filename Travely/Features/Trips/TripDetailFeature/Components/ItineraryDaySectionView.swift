@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ItineraryDaySectionView: View {
     let dayNumber: Int
+    let deletingItemID: ItineraryItem.ID?
+    let isDeleteActionDisabled: Bool
     let section: TripDetailFeature.State.ItinerarySection
     let onDeleteTapped: (ItineraryItem.ID) -> Void
     let onItemTapped: (ItineraryItem.ID) -> Void
@@ -16,6 +18,8 @@ struct ItineraryDaySectionView: View {
             VStack(spacing: 12) {
                 ForEach(section.items) { item in
                     ItineraryRowView(
+                        isDeleteActionDisabled: isDeleteActionDisabled,
+                        isDeleting: deletingItemID == item.id,
                         item: item,
                         onDeleteTapped: {
                             onDeleteTapped(item.id)
