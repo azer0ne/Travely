@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ItineraryRowView: View {
+    let isDeleteActionDisabled: Bool
+    let isDeleting: Bool
     let item: ItineraryItem
     let onDeleteTapped: () -> Void
     let onTapped: () -> Void
@@ -36,9 +38,15 @@ struct ItineraryRowView: View {
 
                 Spacer(minLength: 0)
 
-                Image(systemName: "chevron.right")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
+                if isDeleting {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.appPrimary)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                }
             }
             .padding(16)
             .background(.white)
@@ -46,8 +54,9 @@ struct ItineraryRowView: View {
             .shadow(color: .black.opacity(0.04), radius: 10, y: 4)
         }
         .buttonStyle(.plain)
-        .swipeActions {
+        .swipeActions(allowsFullSwipe: !isDeleteActionDisabled) {
             Button("Delete", role: .destructive, action: onDeleteTapped)
+                .disabled(isDeleteActionDisabled)
         }
     }
 

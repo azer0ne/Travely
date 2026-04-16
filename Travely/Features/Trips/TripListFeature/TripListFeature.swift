@@ -8,13 +8,16 @@ struct TripListFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var createTrip: CreateTripFeature.State?
+        var deletingTripID: Trip.ID?
         var errorMessage: String?
         var isLoading = false
+        var tripPendingDeletion: Trip?
         var trips: [Trip] = []
     }
 
     enum Action {
         case createTrip(PresentationAction<CreateTripFeature.Action>)
+        case deleteTripResponse(TaskResult<Trip.ID>)
         case delegate(DelegateAction)
         case tripsResponse(TaskResult<[Trip]>)
         case view(ViewAction)
@@ -26,6 +29,8 @@ struct TripListFeature {
 
     enum ViewAction {
         case createTripButtonTapped
+        case deleteTripConfirmationDismissed
+        case deleteTripConfirmed
         case deleteTripTapped(Trip.ID)
         case onAppear
         case tripTapped(Trip.ID)
@@ -39,15 +44,39 @@ struct TripListFeature {
                 return .none
 
             case let .view(.deleteTripTapped(tripID)):
+                guard state.deletingTripID == nil,
+                    let trip = state.trips.first(where: { $0.id == tripID })
+                else {
+                    return .none
+                }
+
+                state.tripPendingDeletion = trip
+                return .none
+
+            case .view(.deleteTripConfirmationDismissed):
+                state.tripPendingDeletion = nil
+                return .none
+
+            case .view(.deleteTripConfirmed):
+                guard let trip = state.tripPendingDeletion, state.deletingTripID == nil else {
+                    return .none
+                }
+
+                state.tripPendingDeletion = nil
+                state.deletingTripID = trip.id
                 state.errorMessage = nil
-                return .run { send in
-                    await send(.tripsResponse(TaskResult {
+                return .run { [tripID = trip.id] send in
+                    await send(.deleteTripResponse(TaskResult {
                         try await tripRepository.deleteTrip(tripID)
-                        return try await tripRepository.fetchTrips()
+                        return tripID
                     }))
                 }
 
             case .view(.onAppear):
+                guard !state.isLoading else {
+                    return .none
+                }
+
                 state.isLoading = true
                 state.errorMessage = nil
                 return .run { send in
@@ -70,6 +99,17 @@ struct TripListFeature {
             case .tripsResponse(.failure):
                 state.isLoading = false
                 state.errorMessage = "Could not load trips."
+                return .none
+
+            case let .deleteTripResponse(.success(tripID)):
+                state.deletingTripID = nil
+                state.errorMessage = nil
+                state.trips.removeAll { $0.id == tripID }
+                return .none
+
+            case .deleteTripResponse(.failure):
+                state.deletingTripID = nil
+                state.errorMessage = "Could not delete this trip."
                 return .none
 
             case .createTrip(.presented(.delegate(.cancelled))):

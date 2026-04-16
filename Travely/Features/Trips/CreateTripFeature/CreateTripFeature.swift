@@ -74,6 +74,11 @@ struct CreateTripFeature {
                     return .none
                 }
 
+                if state.includesStartDate && state.includesEndDate && state.endDate < state.startDate {
+                    state.validationMessage = "End date must be on or after the start date."
+                    return .none
+                }
+
                 state.isSaving = true
                 state.validationMessage = nil
 

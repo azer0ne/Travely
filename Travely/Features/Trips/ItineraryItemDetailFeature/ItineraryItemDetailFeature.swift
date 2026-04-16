@@ -36,7 +36,7 @@ struct ItineraryItemDetailFeature {
     }
 
     enum DelegateAction: Equatable {
-        case itineraryItemUpdated(Trip.ID, ItineraryItem)
+        case tripUpdated(Trip)
     }
 
     enum ViewAction: Equatable {
@@ -76,7 +76,7 @@ struct ItineraryItemDetailFeature {
                 state.trip.itineraryItems = state.trip.itineraryItems.map { existingItem in
                     existingItem.id == item.id ? item : existingItem
                 }
-                return .send(.delegate(.itineraryItemUpdated(state.trip.id, item)))
+                return .send(.delegate(.tripUpdated(state.trip)))
 
             case .editItineraryItem(.presented(.delegate(.itineraryItemCreated))):
                 return .none

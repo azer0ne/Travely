@@ -1,31 +1,17 @@
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 struct AppFeature {
     @ObservableState
     struct State: Equatable {
-        var explore = ExploreFeature.State()
-        var map = MapFeature.State()
         var path = StackState<Path.State>()
-        var search = SearchFeature.State()
-        var selectedTab = Tab.explore
         var trips = TripListFeature.State()
     }
 
-    enum Action: BindableAction {
-        case binding(BindingAction<State>)
-        case explore(ExploreFeature.Action)
-        case map(MapFeature.Action)
+    enum Action {
         case path(StackAction<Path.State, Path.Action>)
-        case search(SearchFeature.Action)
         case trips(TripListFeature.Action)
-    }
-
-    enum Tab: String, CaseIterable, Equatable {
-        case explore
-        case search
-        case trips
-        case map
     }
 
     @Reducer
@@ -36,19 +22,8 @@ struct AppFeature {
     }
 
     var body: some ReducerOf<Self> {
-        BindingReducer()
-
-        Scope(state: \.explore, action: \.explore) {
-            ExploreFeature()
-        }
-        Scope(state: \.search, action: \.search) {
-            SearchFeature()
-        }
         Scope(state: \.trips, action: \.trips) {
             TripListFeature()
-        }
-        Scope(state: \.map, action: \.map) {
-            MapFeature()
         }
 
         Reduce { state, action in
@@ -69,24 +44,15 @@ struct AppFeature {
                 state.path.append(.itineraryItemDetail(ItineraryItemDetailFeature.State(trip: trip, itineraryItem: item)))
                 return .none
 
-            case let .path(.element(id: _, action: .itineraryItemDetail(.delegate(.itineraryItemUpdated(tripID, item))))):
-                state.updateTripDetailState(for: tripID, itineraryItem: item)
-                state.updateTripMapState(for: tripID, itineraryItem: item)
+            case let .path(.element(id: _, action: .tripDetail(.delegate(.tripUpdated(trip))))):
+                state.syncTrip(trip)
                 return .none
 
-            case .binding:
-                return .none
-
-            case .explore:
-                return .none
-
-            case .map:
+            case let .path(.element(id: _, action: .itineraryItemDetail(.delegate(.tripUpdated(trip))))):
+                state.syncTrip(trip)
                 return .none
 
             case .path:
-                return .none
-
-            case .search:
                 return .none
 
             case .trips:
@@ -100,42 +66,48 @@ struct AppFeature {
 extension AppFeature.Path.State: Equatable {}
 
 private extension AppFeature.State {
-    mutating func updateTripDetailState(for tripID: Trip.ID, itineraryItem: ItineraryItem) {
-        for elementID in path.ids {
-            guard var tripDetailState = path[id: elementID, case: \.tripDetail] else {
-                continue
-            }
-
-            guard tripDetailState.trip.id == tripID else {
-                continue
-            }
-
-            let updatedItems = tripDetailState.trip.itineraryItems.map { existingItem in
-                existingItem.id == itineraryItem.id ? itineraryItem : existingItem
-            }
-
-            tripDetailState.trip.itineraryItems = updatedItems
-            tripDetailState.updateItineraryItems(updatedItems)
-            path[id: elementID, case: \.tripDetail] = tripDetailState
+    mutating func syncTrip(_ trip: Trip) {
+        if let tripIndex = trips.trips.firstIndex(where: { $0.id == trip.id }) {
+            trips.trips[tripIndex] = trip
+        } else {
+            trips.trips.append(trip)
         }
-    }
+        trips.trips.sort { lhs, rhs in
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
 
-    mutating func updateTripMapState(for tripID: Trip.ID, itineraryItem: ItineraryItem) {
         for elementID in path.ids {
-            guard var tripMapState = path[id: elementID, case: \.tripMap] else {
-                continue
+            if var tripDetailState = path[id: elementID, case: \.tripDetail] {
+                guard tripDetailState.trip.id == trip.id else {
+                    continue
+                }
+
+                tripDetailState.trip = trip
+                tripDetailState.updateItineraryItems(trip.itineraryItems)
+                path[id: elementID, case: \.tripDetail] = tripDetailState
             }
 
-            guard tripMapState.trip.id == tripID else {
-                continue
+            if var tripMapState = path[id: elementID, case: \.tripMap] {
+                guard tripMapState.trip.id == trip.id else {
+                    continue
+                }
+
+                tripMapState.trip = trip
+                tripMapState.updateItineraryItems(trip.itineraryItems)
+                path[id: elementID, case: \.tripMap] = tripMapState
             }
 
-            let updatedItems = tripMapState.trip.itineraryItems.map { existingItem in
-                existingItem.id == itineraryItem.id ? itineraryItem : existingItem
-            }
+            if var itineraryItemDetailState = path[id: elementID, case: \.itineraryItemDetail] {
+                guard itineraryItemDetailState.trip.id == trip.id else {
+                    continue
+                }
 
-            tripMapState.updateItineraryItems(updatedItems)
-            path[id: elementID, case: \.tripMap] = tripMapState
+                itineraryItemDetailState.trip = trip
+                if let updatedItem = trip.itineraryItems.first(where: { $0.id == itineraryItemDetailState.itineraryItem.id }) {
+                    itineraryItemDetailState.itineraryItem = updatedItem
+                }
+                path[id: elementID, case: \.itineraryItemDetail] = itineraryItemDetailState
+            }
         }
     }
 }

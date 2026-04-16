@@ -16,11 +16,25 @@ struct TripListView: View {
                     TripListInlineMessageView(message: errorMessage)
                 }
 
+                if store.deletingTripID != nil {
+                    ProgressView("Removing trip")
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                }
+
+                if store.isLoading && !store.trips.isEmpty {
+                    ProgressView("Refreshing trips")
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                }
+
                 if store.trips.isEmpty {
                     TripListEmptyStateView(isLoading: store.isLoading)
                 } else {
                     ForEach(store.trips) { trip in
                         TripCardView(
+                            isDeleteActionDisabled: store.deletingTripID != nil,
+                            isDeleting: store.deletingTripID == trip.id,
                             trip: trip,
                             onDeleteTapped: {
                                 store.send(.view(.deleteTripTapped(trip.id)))
@@ -37,9 +51,33 @@ struct TripListView: View {
             .padding(.bottom, 96)
         }
         .background(Color.appNeutral)
+        .navigationTitle("Trips")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.view(.onAppear))
+        }
+        .confirmationDialog(
+            "Delete trip?",
+            isPresented: Binding(
+                get: { store.tripPendingDeletion != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        store.send(.view(.deleteTripConfirmationDismissed))
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: store.tripPendingDeletion
+        ) { _ in
+            Button("Delete Trip", role: .destructive) {
+                store.send(.view(.deleteTripConfirmed))
+            }
+
+            Button("Cancel", role: .cancel) {
+                store.send(.view(.deleteTripConfirmationDismissed))
+            }
+        } message: { trip in
+            Text("\"\(trip.name)\" and its itinerary will be removed.")
         }
         .sheet(item: $store.scope(state: \.createTrip, action: \.createTrip)) { store in
             NavigationStack {
